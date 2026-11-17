@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Jarvis</title>
+  </head>
+  <body>
+    <h1>JARVIS</h1>
+    <button id="talk">🎤 Talk</button>
+    <p id="status">Click the button and speak</p>
+    <div id="chat"></div>
+
+    <script>
+      const talkBtn = document.getElementById("talk");
+      const statusEl = document.getElementById("status");
+      const chatEl = document.getElementById("chat");
+
+      const history = [];
+
+      // Speech-to-text (your voice → words)
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-GB";
+
+      talkBtn.addEventListener("click", () => {
+        recognition.start();
+        statusEl.textContent = "Listening...";
+      });
+
+      recognition.addEventListener("result", async (event) => {
+        const question = event.results[0][0].transcript;
+        addMessage("You", question);
+        statusEl.textContent = "Thinking...";
+
+        history.push({ role: "user", content: question });
+
+        // Send the conversation to YOUR server
+        const res = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: history }),
+        });
+        const data = await res.json();
+
+        history.push({ role: "assistant", content: data.answer });
+        addMessage("Jarvis", data.answer);
+        speak(data.answer);
+        statusEl.textContent = "Click the button and speak";
+      });
+
+      // Text-to-speech (words → Jarvis's voice)
+      function speak(text) {
+        const voice = new SpeechSynthesisUtterance(text);
+        voice.lang = "en-GB";
+        speechSynthesis.speak(voice);
+      }
+
+      function addMessage(who, text) {
+        const p = document.createElement("p");
+        p.textContent = `${who}: ${text}`;
+        chatEl.appendChild(p);
+      }
+    </script>
+  </body>
+</html>
